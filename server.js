@@ -2,6 +2,7 @@
 const express = require('express')
 const bodyParser = require('body-parser')
 const Trakt = require('trakt.tv')
+const multipart = require('connect-multiparty')
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -15,7 +16,8 @@ const trakt = new Trakt({
   redirect_uri: process.env.TRAKT_REDIRECT_URI,
 })
 
-app.use(bodyParser.urlencoded())
+app.use(bodyParser.urlencoded({ extended: true }))
+app.use(multipart())
 
 app.post('/', async (req, res) => {
   try {
@@ -29,6 +31,8 @@ app.post('/', async (req, res) => {
     return
   }
 
+  console.log(req.body)
+
   let payload
   try {
     payload = JSON.parse(req.body.payload)
@@ -37,6 +41,8 @@ app.post('/', async (req, res) => {
     return
   }
 
+  console.log(payload)
+
   if (payload.Account.title == process.env.ACCOUNT && ['movie', 'episode'].includes(payload.Metadata.type)) {
     let media
     try {
@@ -44,7 +50,7 @@ app.post('/', async (req, res) => {
       media = (await trakt.search.id({
         id_type: 'tvdb',
         id: tvdbId,
-        type: payload.Metadata.type,
+        type: 'show',
       }))[0][payload.Metadata.type]
     } catch (e) {
       console.error(`Failed to match - GUID: ${payload.Metadata.guid} - ${e}`)
@@ -64,7 +70,7 @@ app.post('/', async (req, res) => {
           })
           break
         case 'media.pause':
-          await trakt.scrobble.start({
+          await trakt.scrobble.pause({
             app_version,
             app_date,
             [payload.Metadata.type]: media,

@@ -37,7 +37,7 @@ app.post('/', async (req, res) => {
     return
   }
 
-  if (payload.Player.uuid == process.env.PLAYER && ['movie', 'episode'].includes(payload.Metadata.type)) {
+  if (payload.Account.title == process.env.ACCOUNT && ['movie', 'episode'].includes(payload.Metadata.type)) {
     let media
     try {
       const [ _, tvdbId ] = payload.Metadata.guid.match(/:\/\/([0-9]+)/)

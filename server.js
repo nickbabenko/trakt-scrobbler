@@ -45,7 +45,7 @@ app.post('/', async (req, res) => {
         id_type: 'tvdb',
         id: tvdbId,
         type: payload.Metadata.type,
-      }))[0][[payload.Metadata.type]]
+      }))[0][payload.Metadata.type]
     } catch (e) {
       console.error(`Failed to match - GUID: ${payload.Metadata.guid} - ${e}`)
       res.sendStatus(400)

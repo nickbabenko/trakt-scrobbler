@@ -68,7 +68,7 @@ app.post('/', async (req, res) => {
       return
     }
 
-    const progress = media?.runtime && payload?.Metadata?.viewOffset
+    const progress = media && media.runtime && payload && payload.Metadata && payload.Metadata.viewOffset
       ? Math.round((Math.round(payload.Metadata.viewOffset / 1000 / 60) / media.runtime) * 100)
       : 0
 

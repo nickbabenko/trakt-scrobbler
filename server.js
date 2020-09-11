@@ -42,15 +42,24 @@ app.post('/', async (req, res) => {
   if (payload.Account.title == process.env.ACCOUNT && ['movie', 'episode'].includes(payload.Metadata.type)) {
     let media
     try {
-      const [ _, tvdbId, seasonNumber, episodeNumber ] = payload.Metadata.guid.match(/:\/\/(\d*)\/(\d*)\/(\d*)/)
+      let [ _, matcherType, matcherId, _2, seasonNumber, _3, episodeNumber ] = payload.Metadata.guid.match(
+        /com\.plexapp\.agents\.(.*):\/\/(tt\d*|\d*)(\/(\d*))?(\/(\d*))?/
+      )
 
-      console.log(tvdbId, seasonNumber, episodeNumber)
+      if (matcherType === 'thetvdb') {
+        matcherType = 'tvdb'
+      }
+
+      console.log('Matched media', matcherType, matcherId, seasonNumber, episodeNumber)
 
       media = (await trakt.search.id({
-        id_type: 'tvdb',
-        id: tvdbId,
+        id_type: matcherType,
+        id: matcherId,
         type: payload.Metadata.type === 'episode' ? 'show' : 'movie',
       }))[0]
+      if (media[payload.Metadata.type]) {
+        media = media[payload.Metadata.type]
+      }
 
       if (payload.Metadata.type === 'episode') {
         media = (await trakt.seasons.summary({
@@ -63,7 +72,7 @@ app.post('/', async (req, res) => {
           .find(episode => episode.number === parseInt(episodeNumber))
       }
     } catch (e) {
-      console.error(`Failed to match - GUID: ${payload.Metadata.guid} - ${e}`)
+      console.error(`Failed to match - GUID: ${payload.Metadata.guid}`, e)
       res.sendStatus(400)
       return
     }
@@ -91,6 +100,7 @@ app.post('/', async (req, res) => {
             progress,
           })
           break
+        case 'media.stop':
         case 'media.scrobble':
           await trakt.scrobble.stop({
             app_version,

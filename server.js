@@ -50,7 +50,7 @@ app.post('/', async (req, res) => {
         matcherType = 'tvdb'
       }
 
-      console.log('Matched media', matcherType, matcherId, seasonNumber, episodeNumber)
+      console.log('Matched media GUID', matcherType, matcherId, seasonNumber, episodeNumber)
 
       media = (await trakt.search.id({
         id_type: matcherType,
@@ -81,10 +81,14 @@ app.post('/', async (req, res) => {
       ? Math.round((Math.round(payload.Metadata.viewOffset / 1000 / 60) / media.runtime) * 100)
       : 0
 
+    console.log(`Matched media ${media.id} ${media.title} and progress ${progress}`)
+
     try {
       switch (payload.event) {
         case 'media.play':
+          console.log('Play scrobble')
         case 'media.resume':
+          console.log('Start scrobble')
           await trakt.scrobble.start({
             app_version,
             app_date,
@@ -93,6 +97,7 @@ app.post('/', async (req, res) => {
           })
           break
         case 'media.pause':
+          console.log('Pause scrobble')
           await trakt.scrobble.pause({
             app_version,
             app_date,
@@ -101,7 +106,9 @@ app.post('/', async (req, res) => {
           })
           break
         case 'media.stop':
+          console.log('Start scrobble')
         case 'media.scrobble':
+          console.log('Scrobble scrobble')
           await trakt.scrobble.stop({
             app_version,
             app_date,

@@ -31,8 +31,6 @@ app.post('/', async (req, res) => {
     return
   }
 
-  console.log(req.body)
-
   let payload
   try {
     payload = JSON.parse(req.body.payload)
@@ -41,22 +39,38 @@ app.post('/', async (req, res) => {
     return
   }
 
-  console.log(payload)
-
   if (payload.Account.title == process.env.ACCOUNT && ['movie', 'episode'].includes(payload.Metadata.type)) {
     let media
     try {
-      const [ _, tvdbId ] = payload.Metadata.guid.match(/:\/\/([0-9]+)/)
+      const [ _, tvdbId, seasonNumber, episodeNumber ] = payload.Metadata.guid.match(/:\/\/(\d*)\/(\d*)\/(\d*)/)
+
+      console.log(tvdbId, seasonNumber, episodeNumber)
+
       media = (await trakt.search.id({
         id_type: 'tvdb',
         id: tvdbId,
-        type: 'show',
-      }))[0][payload.Metadata.type]
+        type: payload.Metadata.type === 'episode' ? 'show' : 'movie',
+      }))[0]
+
+      if (payload.Metadata.type === 'episode') {
+        media = (await trakt.seasons.summary({
+          id: media.show.ids.trakt,
+          extended: 'episodes,full',
+        }))
+        media = media
+          .find(season => season.number === parseInt(seasonNumber))
+          .episodes
+          .find(episode => episode.number === parseInt(episodeNumber))
+      }
     } catch (e) {
       console.error(`Failed to match - GUID: ${payload.Metadata.guid} - ${e}`)
       res.sendStatus(400)
       return
     }
+
+    const progress = media?.runtime && payload?.Metadata?.viewOffset
+      ? Math.round((Math.round(payload.Metadata.viewOffset / 1000 / 60) / media.runtime) * 100)
+      : 0
 
     try {
       switch (payload.event) {
@@ -66,7 +80,7 @@ app.post('/', async (req, res) => {
             app_version,
             app_date,
             [payload.Metadata.type]: media,
-            progress: 0,
+            progress,
           })
           break
         case 'media.pause':
@@ -74,7 +88,7 @@ app.post('/', async (req, res) => {
             app_version,
             app_date,
             [payload.Metadata.type]: media,
-            progress: 0,
+            progress,
           })
           break
         case 'media.scrobble':
@@ -82,7 +96,7 @@ app.post('/', async (req, res) => {
             app_version,
             app_date,
             [payload.Metadata.type]: media,
-            progress: 90,
+            progress,
           })
           break
       }
